@@ -15,7 +15,7 @@
         "length": 17,
         "seed": 42
       },
-      "timeout": 600000
+      "timeout": 900000
     }
   ]
 }

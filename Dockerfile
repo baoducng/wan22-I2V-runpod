@@ -28,7 +28,8 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # Copy application code
 COPY . .
 
-# Pre-download models at build time (baked into image for Hub tests without volume)
-RUN python3 preload_model.py
+# Model is downloaded from HuggingFace Hub at container startup (not baked in)
+# To cache on a persistent volume, set HF_HOME=/runpod-volume/hf_cache in endpoint env vars
+#RUN python3 preload_model.py
 
 CMD ["python3", "handler.py"]

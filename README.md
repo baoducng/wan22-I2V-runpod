@@ -65,7 +65,9 @@ Or use `image_url` instead of `image_base64`:
 
 - GPU: 48 GB+ VRAM (A40, L40S, A100, H100, H200)
 - CUDA 12.4+
-- No persistent volume required — model is baked into the image (~28 GB)
+- Model (`Wan-AI/Wan2.2-I2V-A14B-Diffusers`, ~28 GB) is downloaded from HuggingFace at first startup
+
+To cache on a persistent volume and skip re-download on each cold start, set the env var `HF_HOME=/runpod-volume/hf_cache` on your serverless endpoint.
 
 ## Repository Structure
 
@@ -83,8 +85,6 @@ utils/
   tests.json
 ```
 
-## Model storage
+## Model caching
 
-The model (~28 GB) is downloaded to `/app/models/Wan2.2-I2V-A14B-Diffusers` at Docker build time.
-
-If a persistent volume is mounted at `/runpod-volume`, the worker will use `/runpod-volume/models/Wan2.2-I2V-A14B-Diffusers` if that path exists (useful for faster pod restarts on self-hosted endpoints).
+The model is loaded from HuggingFace Hub (`Wan-AI/Wan2.2-I2V-A14B-Diffusers`) at worker startup. On first cold start this downloads ~28 GB (~80 s on RunPod infra). Set `HF_HOME=/runpod-volume/hf_cache` in your endpoint environment variables to persist the cache across worker restarts.

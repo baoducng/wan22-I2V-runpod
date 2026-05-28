@@ -15,9 +15,7 @@ from torchao.quantization import Int8WeightOnlyConfig
 # =========================
 # Global config
 # =========================
-from pathlib import Path as _P
-_vol_model = _P("/runpod-volume/models/Wan2.2-I2V-A14B-Diffusers")
-MODEL_ID = str(_vol_model) if _vol_model.exists() else "/app/models/Wan2.2-I2V-A14B-Diffusers"
+MODEL_ID = "Wan-AI/Wan2.2-I2V-A14B-Diffusers"
 DEVICE = "cuda"
 
 FIXED_FPS = 16
