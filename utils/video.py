@@ -1,8 +1,8 @@
-import os
 import gc
 import torch
 import numpy as np
 from PIL import Image
+from typing import Optional
 
 from diffusers.pipelines.wan.pipeline_wan_i2v import WanImageToVideoPipeline
 from diffusers.models.transformers.transformer_wan import WanTransformer3DModel
@@ -12,13 +12,10 @@ from torchao.quantization import quantize_
 from torchao.quantization import Int8WeightOnlyConfig
 
 
-
-
 # =========================
 # Global config
 # =========================
 MODEL_ID = "/runpod-volume/models/Wan2.2-I2V-A14B-Diffusers"
-LORA_ID = "/runpod-volume/models/lora/WanVideo_comfy"
 DEVICE = "cuda"
 
 FIXED_FPS = 16
@@ -98,38 +95,7 @@ def load_pipe():
         torch_dtype=torch.bfloat16,
     ).to(DEVICE)
 
-    print("⚡ Loading Lightning LoRA...")
-
-    pipe.load_lora_weights(
-        "/runpod-volume/models/lora/WanVideo_comfy",
-        weight_name="Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank128_bf16.safetensors",
-        adapter_name="lightx2v",
-    )
-
-    pipe.load_lora_weights(
-        "/runpod-volume/models/lora/WanVideo_comfy",
-        weight_name="Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank128_bf16.safetensors",
-        adapter_name="lightx2v_2",
-        load_into_transformer_2=True,
-    )
-
-    pipe.set_adapters(["lightx2v", "lightx2v_2"], adapter_weights=[1.0, 1.0])
-
-    pipe.fuse_lora(
-        adapter_names=["lightx2v"],
-        lora_scale=3.0,
-        components=["transformer"],
-    )
-
-    pipe.fuse_lora(
-        adapter_names=["lightx2v_2"],
-        lora_scale=1.0,
-        components=["transformer_2"],
-    )
-
-    pipe.unload_lora_weights()
-
-    print("🔒 Applying safe quantization...")
+    print("🔒 Applying Int8 quantization to text encoder...")
     quantize_(pipe.text_encoder, Int8WeightOnlyConfig())
 
     pipe.transformer.to(torch.bfloat16)
@@ -144,16 +110,20 @@ def load_pipe():
     return _PIPE
 
 
+# =========================
 # Video generation
+# =========================
 def generate_video(
     image_path: str,
     prompt: str,
     output_path: str,
-    duration_sec: float = 3.0,
-    steps: int = 4,
+    duration_sec: float = 5.0,
+    num_frames_override: Optional[int] = None,
+    steps: int = 25,
     seed: int = 42,
-    guidance_scale: float = 1.0,
-    guidance_scale_2: float = 1.0,
+    guidance_scale: float = 5.0,
+    guidance_scale_2: float = 5.0,
+    negative_prompt: Optional[str] = None,
 ):
     pipe = load_pipe()
 
@@ -163,13 +133,17 @@ def generate_video(
     image = Image.open(image_path).convert("RGB")
     image = resize_image(image)
 
-    num_frames = get_num_frames(duration_sec)
+    if num_frames_override is not None:
+        num_frames = int(np.clip(num_frames_override, MIN_FRAMES_MODEL, MAX_FRAMES_MODEL))
+    else:
+        num_frames = get_num_frames(duration_sec)
+
     generator = torch.Generator(device="cuda").manual_seed(seed)
 
     out = pipe(
         image=image,
         prompt=prompt,
-        negative_prompt=DEFAULT_NEGATIVE_PROMPT,
+        negative_prompt=negative_prompt or DEFAULT_NEGATIVE_PROMPT,
         height=image.height,
         width=image.width,
         num_frames=num_frames,

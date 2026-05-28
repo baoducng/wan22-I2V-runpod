@@ -1,142 +1,95 @@
 import runpod
 import uuid
 import os
+import base64
 import logging
 import time
 import shutil
 import torch
+import requests
 from pathlib import Path
-from utils.s3 import download_image, upload_video
-from utils.utllity import (load_environment,
-                           # reset_runtime_env,
-                           classify_env,
-                           extract_last_clear_frame,)
 from utils.video import load_pipe, generate_video
-from moviepy import VideoFileClip, concatenate_videoclips
-from preload_model import ensure_models
+
 logging.basicConfig(level=logging.INFO)
 
-# ensure_models()
+SEED = 42
 
-# _ = load_pipe() #loading wan2.2
-SEED = 123
+# Load pipeline once at worker startup (cached globally in video.py)
+load_pipe()
 
 
 def handler(event):
     workdir = None
-    clips = []
-    # ensure_models()
-    _ = load_pipe()
     try:
-        # reset_runtime_env()
         inp = event["input"]
-        print("===== FILESYSTEM TREE =====")
-        # ---- Info-only mode ----
-        if inp.get("aleef") is True:
-            return {
-                "service": "wan2.2-i2v",
-                "version": "1.0",
-                "inputs": ["prompts", "clip_sec", "img_path", "level"],
-            }
 
-        prompts = inp["prompts"]
-        clip_sec = inp.get("clip_sec", 5)
-        img_path = inp["img_path"]
-        level = inp.get("level")
-
-        # ---- Environment selection ----
-        try:
-            if level:
-                load_environment(level)
-            else:
-                _, _, bucket, *_ = img_path.split("/")
-                level = classify_env(bucket)
-                load_environment(level)
-        except Exception:
-            load_environment() # default = stag
-
-        # ---- Working directory ----
+        # ---- Image input ----
         workdir = Path("/tmp") / str(uuid.uuid4())
         workdir.mkdir(parents=True, exist_ok=True)
+        input_img = workdir / "input.jpg"
 
-        input_img = workdir / "input.png"
-        download_image(img_path, str(input_img))
+        if inp.get("image_base64"):
+            raw = inp["image_base64"]
+            if "," in raw:
+                raw = raw.split(",", 1)[1]
+            with open(input_img, "wb") as f:
+                f.write(base64.b64decode(raw))
+        elif inp.get("image_url"):
+            r = requests.get(inp["image_url"], timeout=30)
+            r.raise_for_status()
+            with open(input_img, "wb") as f:
+                f.write(r.content)
+        else:
+            return {"error": "Must provide image_base64 or image_url"}
 
-        current_image = str(input_img)
-        video_paths = []
-        total_time = 0
+        # ---- Prompt ----
+        prompt = inp.get("prompt") or ""
+        # prompts array: chained multi-clip; web app always sends single prompt
+        prompts = inp.get("prompts") or [prompt]
+        if not prompts or not prompts[0]:
+            return {"error": "Must provide prompt or prompts"}
 
-        # ---- Generate clips ----
-        for idx, prompt in enumerate(prompts):
-            start = time.time()
-            logging.info(f"🎬 Generating clip {idx + 1}")
+        # ---- Generation params ----
+        seed = inp.get("seed", SEED)
+        steps = inp.get("steps", 25)
+        guidance_scale = float(inp.get("cfg", 5.0))
+        negative_prompt = inp.get("negative_prompt")
 
-            video_path = workdir / f"clip_{idx + 1}.mp4"
-            frame_path = workdir / f"clip_{idx + 1}_last.jpg"
+        # length (frames) takes precedence over clip_sec
+        num_frames = int(inp["length"]) if "length" in inp else None
+        clip_sec = float(inp.get("clip_sec", 5.0))
 
-            generate_video(
-                image_path=current_image,
-                prompt=prompt,
-                output_path=str(video_path),
-                duration_sec=clip_sec,
-                steps=8,
-                seed=SEED + idx,
-            )
+        # ---- Generate ----
+        start = time.time()
+        video_path = workdir / "output.mp4"
 
-            video_paths.append(str(video_path))
-
-            current_image = extract_last_clear_frame(
-                video_path=str(video_path),
-                output_path=str(frame_path),
-                sharpness_threshold=75.0,
-            )
-
-            total_time += time.time() - start
-
-        logging.info(f"⏱️ Total generation time: {total_time:.2f}s")
-
-        # ---- Concatenate ----
-        final_video_path = workdir / "final.mp4"
-
-        clips = [VideoFileClip(v) for v in video_paths]
-        final = concatenate_videoclips(clips, method="chain")
-
-        final.write_videofile(
-            str(final_video_path),
-            codec="libx264",
-            audio=False,
-            fps=clips[0].fps,
-            logger=None,
+        generate_video(
+            image_path=str(input_img),
+            prompt=prompts[0],
+            output_path=str(video_path),
+            duration_sec=clip_sec,
+            num_frames_override=num_frames,
+            steps=steps,
+            seed=seed,
+            guidance_scale=guidance_scale,
+            guidance_scale_2=guidance_scale,
+            negative_prompt=negative_prompt,
         )
 
-        # ---- Upload ----
-        key = f"video_gen/wan2/{uuid.uuid4()}.mp4"
-        s3_path = upload_video(str(final_video_path), key)
+        logging.info(f"⏱️ Generation time: {time.time() - start:.2f}s")
 
-        return {"video_path": s3_path}
+        with open(video_path, "rb") as f:
+            video_b64 = base64.b64encode(f.read()).decode()
+
+        return {"video_base64": video_b64}
 
     except Exception as e:
         logging.exception("❌ Generation failed")
         return {"error": str(e)}
 
     finally:
-        # ---- Close MoviePy handles ----
-        for c in clips:
-            try:
-                c.close()
-            except Exception:
-                pass
-
-        try:
-            final.close()
-        except Exception:
-            pass
-
-        # ---- Cleanup files ----
         if workdir and workdir.exists():
             shutil.rmtree(workdir, ignore_errors=True)
-
-        # ---- Cleanup GPU ----
         torch.cuda.empty_cache()
 
 

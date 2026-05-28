@@ -1,18 +1,21 @@
 {
+  "config": {
+    "gpuTypeId": "NVIDIA GeForce RTX 4090",
+    "gpuCount": 1,
+    "allowedCudaVersions": ["12.8"]
+  },
   "tests": [
     {
-      "name": "info_mode_test",
+      "name": "smoke_test_url",
       "input": {
-        "aleef": true
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/280px-PNG_transparency_demonstration_1.png",
+        "prompt": "gentle breeze, calm motion, soft light",
+        "steps": 4,
+        "cfg": 5.0,
+        "length": 17,
+        "seed": 42
       },
-      "timeout": 20000
+      "timeout": 600000
     }
-  ],
-  "config": {
-    "gpuTypeId": "NVIDIA A100 80GB PCIe",
-    "gpuCount": 1,
-    "allowedCudaVersions": [
-      "12.8"
-    ]
-  }
+  ]
 }
