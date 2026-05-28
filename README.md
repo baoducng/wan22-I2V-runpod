@@ -63,9 +63,9 @@ Or use `image_url` instead of `image_base64`:
 
 ## Requirements
 
-- GPU: RTX 4090 (24 GB) or A100 (40/80 GB)
-- Persistent volume with model pre-downloaded at `/runpod-volume`
-- CUDA 12.8
+- GPU: 48 GB+ VRAM (A40, L40S, A100, H100, H200)
+- CUDA 12.4+
+- No persistent volume required — model is baked into the image (~28 GB)
 
 ## Repository Structure
 
@@ -83,12 +83,8 @@ utils/
   tests.json
 ```
 
-## Pre-downloading the model
+## Model storage
 
-If the volume is empty, run once on a GPU pod:
+The model (~28 GB) is downloaded to `/app/models/Wan2.2-I2V-A14B-Diffusers` at Docker build time.
 
-```bash
-python preload_model.py
-```
-
-This downloads only the required Wan2.2 model files (~28 GB) to `/runpod-volume/models/Wan2.2-I2V-A14B-Diffusers`.
+If a persistent volume is mounted at `/runpod-volume`, the worker will use `/runpod-volume/models/Wan2.2-I2V-A14B-Diffusers` if that path exists (useful for faster pod restarts on self-hosted endpoints).

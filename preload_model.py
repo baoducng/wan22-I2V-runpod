@@ -3,7 +3,7 @@ def ensure_models():
     from pathlib import Path
 
     WAN_REPO_ID = "Wan-AI/Wan2.2-I2V-A14B-Diffusers"
-    BASE_MODEL_DIR = Path("/runpod-volume/models/Wan2.2-I2V-A14B-Diffusers")
+    BASE_MODEL_DIR = Path("/app/models/Wan2.2-I2V-A14B-Diffusers")
     WAN_SENTINEL = BASE_MODEL_DIR / "model_index.json"
 
     BASE_MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -14,7 +14,7 @@ def ensure_models():
             repo_id=WAN_REPO_ID,
             repo_type="model",
             local_dir=str(BASE_MODEL_DIR),
-            cache_dir="/runpod-volume/huggingface",
+            cache_dir="/app/models/.hf_cache",
             local_dir_use_symlinks=False,
             allow_patterns=[
                 "model_index.json",
@@ -28,3 +28,7 @@ def ensure_models():
         )
     else:
         print("✅ Wan 2.2 base model already present")
+
+
+if __name__ == "__main__":
+    ensure_models()

@@ -28,7 +28,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # Copy application code
 COPY . .
 
-# Pre-download models at build time
-#RUN python3 preload_model.py
+# Pre-download models at build time (baked into image for Hub tests without volume)
+RUN python3 preload_model.py
 
 CMD ["python3", "handler.py"]
