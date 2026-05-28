@@ -8,7 +8,7 @@
     {
       "name": "smoke_test_b64",
       "input": {
-        "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjE+ibYAAAAASUVORK5CYII=",
+        "image_base64": "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGPc0pPCQApgIkn1qIZRDUNKAwA3owHEPrkQSAAAAABJRU5ErkJggg==",
         "prompt": "gentle breeze, calm motion, soft light",
         "steps": 4,
         "cfg": 5.0,
