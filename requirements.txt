@@ -2,9 +2,9 @@
 git+https://github.com/linoytsaban/diffusers.git@wan22-loras
 
 # Torch stack
-torch==2.7.1+cu128
-torchvision==0.22.1+cu128
-torchaudio==2.7.1+cu128
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+torchaudio==2.6.0+cu124
 
 # Core ecosystem
 transformers==4.57.3

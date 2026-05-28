@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.8.0-runtime-ubuntu22.04
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -23,7 +23,7 @@ RUN pip install --upgrade pip setuptools wheel
 # Install remaining deps (PyPI + git)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
-    --extra-index-url https://download.pytorch.org/whl/cu128
+    --extra-index-url https://download.pytorch.org/whl/cu124
 
 # Copy application code
 COPY . .

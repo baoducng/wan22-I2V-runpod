@@ -2,7 +2,7 @@
   "config": {
     "gpuTypeId": "NVIDIA GeForce RTX 4090",
     "gpuCount": 1,
-    "allowedCudaVersions": ["12.8"]
+    "allowedCudaVersions": ["12.4", "12.5", "12.6", "12.7", "12.8"]
   },
   "tests": [
     {
