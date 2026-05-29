@@ -25,6 +25,15 @@ MULTIPLE_OF = 16
 MIN_FRAMES_MODEL = 8
 MAX_FRAMES_MODEL = 7720
 
+# Wan2.2-A14B native generation area (720p). Cost is driven by pixel-area, so we
+# always target this area regardless of input size — small images are upscaled,
+# large ones downscaled — to keep the model at its trained resolution.
+TARGET_AREA = 1280 * 720  # 921,600 px
+
+# MP4 export quality (0-10, diffusers default 5). 9 keeps the encoder from
+# softening the model output before Facebook re-compresses it on upload.
+EXPORT_QUALITY = 9
+
 DEFAULT_NEGATIVE_PROMPT = (
     "low quality, worst quality, motion artifacts, unstable motion, jitter, frame jitter, "
     "wobbling limbs, motion distortion, inconsistent movement, robotic movement, "
@@ -51,15 +60,42 @@ def get_num_frames(duration_seconds: float) -> int:
     return int(np.clip(frames + 1, MIN_FRAMES_MODEL, MAX_FRAMES_MODEL))
 
 
-def resize_image(image: Image.Image) -> Image.Image:
+def crop_to_aspect(image: Image.Image, aspect_w: int, aspect_h: int) -> Image.Image:
+    """Center-crop `image` to the given aspect ratio (e.g. 9:16 for vertical).
+
+    No-op when the image already matches the target ratio, so a pre-cropped
+    upload is passed through untouched.
+    """
     w, h = image.size
-    scale = min(MAX_DIM / max(w, h), 1.0)
-    w, h = int(w * scale), int(h * scale)
-    w = (w // MULTIPLE_OF) * MULTIPLE_OF
-    h = (h // MULTIPLE_OF) * MULTIPLE_OF
-    w = max(MIN_DIM, w)
-    h = max(MIN_DIM, h)
-    return image.resize((w, h), Image.LANCZOS)
+    target = aspect_w / aspect_h
+    current = w / h
+    if abs(current - target) < 1e-3:
+        return image
+    if current > target:
+        # too wide -> trim the sides
+        new_w = int(round(h * target))
+        x0 = (w - new_w) // 2
+        return image.crop((x0, 0, x0 + new_w, h))
+    # too tall -> trim top/bottom
+    new_h = int(round(w / target))
+    y0 = (h - new_h) // 2
+    return image.crop((0, y0, w, y0 + new_h))
+
+
+def resize_image(image: Image.Image) -> Image.Image:
+    """Resize to the model's native 720p pixel-area, preserving aspect ratio.
+
+    Targets a fixed area (up- or down-scaling as needed) so small uploads still
+    run at the model's trained resolution instead of below it. Dimensions are
+    snapped to a multiple of 16 and floored at MIN_DIM.
+    """
+    w, h = image.size
+    aspect = h / w
+    height = int(round((TARGET_AREA * aspect) ** 0.5))
+    width = int(round((TARGET_AREA / aspect) ** 0.5))
+    width = max(MIN_DIM, (width // MULTIPLE_OF) * MULTIPLE_OF)
+    height = max(MIN_DIM, (height // MULTIPLE_OF) * MULTIPLE_OF)
+    return image.resize((width, height), Image.LANCZOS)
 
 
 # =========================
@@ -119,11 +155,12 @@ def generate_video(
     output_path: str,
     duration_sec: float = 5.0,
     num_frames_override: Optional[int] = None,
-    steps: int = 25,
+    steps: int = 40,
     seed: int = 42,
     guidance_scale: float = 5.0,
-    guidance_scale_2: float = 5.0,
+    guidance_scale_2: float = 6.0,
     negative_prompt: Optional[str] = None,
+    orientation: Optional[str] = None,
 ):
     pipe = load_pipe()
 
@@ -131,6 +168,15 @@ def generate_video(
     gc.collect()
 
     image = Image.open(image_path).convert("RGB")
+
+    # Force a 9:16 frame for vertical (Facebook/Reels) by center-cropping the
+    # source *before* generation — every generated pixel then lands in the final
+    # video at full resolution. A pre-cropped 9:16 upload passes through as-is.
+    if orientation == "vertical":
+        image = crop_to_aspect(image, 9, 16)
+    elif orientation == "horizontal":
+        image = crop_to_aspect(image, 16, 9)
+
     image = resize_image(image)
 
     if num_frames_override is not None:
@@ -157,5 +203,5 @@ def generate_video(
     del out
     torch.cuda.empty_cache()
 
-    export_to_video(frames, output_path, fps=FIXED_FPS)
+    export_to_video(frames, output_path, fps=FIXED_FPS, quality=EXPORT_QUALITY)
     return output_path

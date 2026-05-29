@@ -51,9 +51,14 @@ def handler(event):
 
         # ---- Generation params ----
         seed = inp.get("seed", SEED)
-        steps = inp.get("steps", 25)
+        steps = inp.get("steps", 40)
         guidance_scale = float(inp.get("cfg", 5.0))
+        # Low-noise (detail) expert defaults higher than the high-noise (layout)
+        # expert, per the A14B two-expert design.
+        guidance_scale_2 = float(inp.get("cfg2", 6.0))
         negative_prompt = inp.get("negative_prompt")
+        # "vertical" (9:16, Facebook/Reels), "horizontal" (16:9), or None=native
+        orientation = inp.get("orientation")
 
         # length (frames) takes precedence over clip_sec
         num_frames = int(inp["length"]) if "length" in inp else None
@@ -72,8 +77,9 @@ def handler(event):
             steps=steps,
             seed=seed,
             guidance_scale=guidance_scale,
-            guidance_scale_2=guidance_scale,
+            guidance_scale_2=guidance_scale_2,
             negative_prompt=negative_prompt,
+            orientation=orientation,
         )
 
         logging.info(f"⏱️ Generation time: {time.time() - start:.2f}s")
