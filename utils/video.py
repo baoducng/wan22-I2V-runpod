@@ -81,25 +81,25 @@ def load_pipe():
         subfolder="transformer",
         torch_dtype=torch.bfloat16,
     )
+    quantize_(transformer, Int8WeightOnlyConfig())
 
     transformer_2 = WanTransformer3DModel.from_pretrained(
         MODEL_ID,
         subfolder="transformer_2",
         torch_dtype=torch.bfloat16,
     )
+    quantize_(transformer_2, Int8WeightOnlyConfig())
 
+    print("🔒 Applying Int8 quantization to text encoder...")
     pipe = WanImageToVideoPipeline.from_pretrained(
         MODEL_ID,
         transformer=transformer,
         transformer_2=transformer_2,
         torch_dtype=torch.bfloat16,
-    ).to(DEVICE)
-
-    print("🔒 Applying Int8 quantization to text encoder...")
+    )
     quantize_(pipe.text_encoder, Int8WeightOnlyConfig())
 
-    pipe.transformer.to(torch.bfloat16)
-    pipe.transformer_2.to(torch.bfloat16)
+    pipe.to(DEVICE)
 
     pipe.vae.enable_tiling()
     pipe.vae.enable_slicing()
