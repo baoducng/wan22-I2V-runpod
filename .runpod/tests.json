@@ -7,14 +7,7 @@
   "tests": [
     {
       "name": "smoke_test_b64",
-      "input": {
-        "image_base64": "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGPc0pPCQApgIkn1qIZRDUNKAwA3owHEPrkQSAAAAABJRU5ErkJggg==",
-        "prompt": "gentle breeze, calm motion, soft light",
-        "steps": 4,
-        "cfg": 5.0,
-        "length": 17,
-        "seed": 42
-      },
+      "input": "eyJpbWFnZV9iYXNlNjQiOiAiaVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUJBQUFBQVFDQUlBQUFDUWtXZzJBQUFBR1VsRVFWUjRuR1BjMHBQQ1FBcGdJa24xcUlaUkRVTktBd0Ezb3dIRVBya1FTQUFBQUFCSlJVNUVya0pnZ2c9PSIsICJwcm9tcHQiOiAiZ2VudGxlIGJyZWV6ZSwgY2FsbSBtb3Rpb24sIHNvZnQgbGlnaHQiLCAic3RlcHMiOiA0LCAiY2ZnIjogNS4wLCAibGVuZ3RoIjogMTcsICJzZWVkIjogNDJ9",
       "timeout": 900000
     }
   ]
