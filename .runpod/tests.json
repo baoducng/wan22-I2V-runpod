@@ -6,7 +6,7 @@
   },
   "tests": [
     {
-      "name": "smoke_test_b64",
+      "name": "smoke_test",
       "input": {
         "image_base64": "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGPc0pPCQApgIkn1qIZRDUNKAwA3owHEPrkQSAAAAABJRU5ErkJggg==",
         "prompt": "gentle breeze, calm motion, soft light",

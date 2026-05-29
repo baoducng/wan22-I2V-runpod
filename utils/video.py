@@ -15,7 +15,9 @@ from torchao.quantization import Int8WeightOnlyConfig
 # =========================
 # Global config
 # =========================
-MODEL_ID = "Wan-AI/Wan2.2-I2V-A14B-Diffusers"
+import os as _os
+_LOCAL_MODEL = "/app/models/Wan2.2-I2V-A14B-Diffusers"
+MODEL_ID = _LOCAL_MODEL if _os.path.isdir(_LOCAL_MODEL) else "Wan-AI/Wan2.2-I2V-A14B-Diffusers"
 DEVICE = "cuda"
 
 FIXED_FPS = 16

@@ -1,6 +1,7 @@
 import runpod
 import uuid
 import os
+import base64
 import logging
 import time
 import shutil
@@ -84,12 +85,17 @@ def handler(event):
 
         logging.info(f"⏱️ Generation time: {time.time() - start:.2f}s")
 
-        job_id = event.get("id", "unknown")
-        key = f"jobs/{job_id}/{int(time.time())}.mp4"
-        video_url = upload_video(str(video_path), key)
-        logging.info(f"📤 Uploaded to blob: {video_url}")
-
-        return {"video_url": video_url}
+        if os.environ.get("BLOB_READ_WRITE_TOKEN"):
+            job_id = event.get("id", "unknown")
+            key = f"jobs/{job_id}/{int(time.time())}.mp4"
+            video_url = upload_video(str(video_path), key)
+            logging.info(f"📤 Uploaded to blob: {video_url}")
+            return {"video_url": video_url}
+        else:
+            with open(video_path, "rb") as f:
+                video_b64 = base64.b64encode(f.read()).decode()
+            logging.warning("⚠️ BLOB_READ_WRITE_TOKEN not set — returning base64 fallback")
+            return {"video_base64": video_b64}
 
     except Exception as e:
         logging.exception("❌ Generation failed")
