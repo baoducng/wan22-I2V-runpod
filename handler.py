@@ -1,7 +1,6 @@
 import runpod
 import uuid
 import os
-import base64
 import logging
 import time
 import shutil
@@ -9,6 +8,7 @@ import torch
 import requests
 from pathlib import Path
 from utils.video import load_pipe, generate_video
+from utils.blob import upload_video
 
 logging.basicConfig(level=logging.INFO)
 
@@ -84,10 +84,12 @@ def handler(event):
 
         logging.info(f"⏱️ Generation time: {time.time() - start:.2f}s")
 
-        with open(video_path, "rb") as f:
-            video_b64 = base64.b64encode(f.read()).decode()
+        job_id = event.get("id", "unknown")
+        key = f"jobs/{job_id}/{int(time.time())}.mp4"
+        video_url = upload_video(str(video_path), key)
+        logging.info(f"📤 Uploaded to blob: {video_url}")
 
-        return {"video_base64": video_b64}
+        return {"video_url": video_url}
 
     except Exception as e:
         logging.exception("❌ Generation failed")
