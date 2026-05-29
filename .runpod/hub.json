@@ -1,6 +1,6 @@
 {
   "title": "Wan2.2 I2V (Diffusers, base model)",
-  "description": "Wan2.2 I2V A14B via Diffusers. Accepts image_base64 or image_url + prompt. Returns video_base64. No LoRA.",
+  "description": "Wan2.2 I2V A14B via Diffusers. Accepts image_base64 or image_url + prompt. Returns video_base64. Supports orientation=vertical for 9:16 Facebook/Reels output. No LoRA.",
   "type": "serverless",
   "category": "video",
   "iconUrl": "https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B-Diffusers/resolve/main/assets/logo.png",
